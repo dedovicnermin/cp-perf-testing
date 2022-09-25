@@ -1,0 +1,52 @@
+FROM adoptopenjdk/openjdk11:alpine-jre
+WORKDIR /app
+ARG JAR_FILE=target/streams-app.jar
+ARG JAVA_AGENT_FILE=dd-java-agent.jar
+
+
+COPY ${JAR_FILE} app.jar
+COPY ${JAVA_AGENT_FILE} dd-java-agent.jar
+
+EXPOSE 9999
+EXPOSE 8080
+ENV JAVA_TOOL_OPTIONS "-Dcom.sun.management.jmxremote.ssl=false \
+ -Dcom.sun.management.jmxremote.authenticate=false \
+ -Dcom.sun.management.jmxremote.port=9999 \
+ -Dcom.sun.management.jmxremote.rmi.port=9999 \
+ -Dcom.sun.management.jmxremote.host=0.0.0.0 \
+ -Djava.rmi.server.hostname=localhost \
+ -Ddd.profiling.enabled=true \
+ -XX:FlightRecorderOptions=stackdepth=256 \
+ -Ddd.logs.injection=true \
+ -Ddd.appsec.enabled=true"
+
+ENV DD_TRACE_AGENT_PORT=8126
+ENV JMX_PORT=9999
+ENV CONSUMER_SASL_JAAS_CONFIG=${CONSUMER_SASL_JAAS_CONFIG}
+ENV DD_API_KEY=${DD_API_KEY}
+
+ENV BOOTSTRAP_SERVERS=${BOOTSTRAP_SERVERS}
+ENV TRUSTS_LOCATION=${TRUSTS_LOCATION}
+ENV KEYS_LOCATION=${KEYS_LOCATION}
+ENV KEY_PASSWORD=${KEY_PASSWORD}
+ENV KEYS_PASSWORD=${KEYS_PASSWORD}
+ENV TRUSTS_PASSWORD=${TRUSTS_PASSWORD}
+ENV APPLICATION_ID=${APPLICATION_ID}
+ENV STREAM_THREAD_COUNT=${STREAM_THREAD_COUNT}
+ENV GROUP_ID=${GROUP_ID}
+ENV DD_JMXFETCH_KAFKA_ENABLED=true
+
+ENV INPUT_TOPIC=${INPUT_TOPIC}
+ENV OUTPUT_TOPIC=${OUTPUT_TOPIC}
+
+RUN apk add --update \
+    curl \
+    && rm -rf /var/cache/apk/*
+
+HEALTHCHECK --interval=1m --timeout=3s CMD curl -f http://localhost:8080/actuator/health/ || exit 1
+
+VOLUME ["/app/logs"]
+
+
+# java -jar /app/app.jar
+ENTRYPOINT ["java", "-javaagent:dd-java-agent.jar", "-jar", "app.jar"]

@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: producer-deployment
+  labels:
+    app: producer
+spec:
+  replicas: 30
+  selector:
+    matchLabels:
+      app: producer
+  template:
+    metadata:
+      labels:
+        app: producer
+    spec:
+      containers:
+        - name: producer
+          image: dedovicnermin/perf-producer-1k:latest
+          env:
+            - name: BOOTSTRAP_SERVERS
+              value: "kafka-service-1:9093"
+            - name: CA_CRT_LOCATION
+              value: "/mnt/certs/ca/ca.crt"
+            - name: CLIENT_CRT_LOCATION
+              value: "/mnt/certs/crt/tls.crt"
+            - name: CLIENT_KEY_LOCATION
+              value: "/mnt/certs/key/tls.key"
+            - name: INPUT_TOPIC
+              value: "test-input"
+            - name: SSL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password-key
+                  name: jks-password-secret
+          imagePullPolicy: Always
+          volumeMounts:
+            - mountPath: "/mnt/certs/ca"
+              name: cacert
+              readOnly: true
+            - mountPath: "/mnt/certs/crt"
+              name: clientcert
+              readOnly: true
+            - mountPath: "/mnt/certs/key"
+              name: clientkey
+              readOnly: true
+
+      volumes:
+        - name: cacert
+          secret:
+            secretName: client-key-pair
+            items:
+              - key: ca.crt
+                path: ca.crt
+        - name: clientcert
+          secret:
+            secretName: client-key-pair
+            items:
+              - key: tls.crt
+                path: tls.crt
+        - name: clientkey
+          secret:
+            secretName: client-key-pair
+            items:
+              - key: tls.key
+                path: tls.key

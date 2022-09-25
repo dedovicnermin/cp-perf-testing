@@ -1,0 +1,392 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-service-1
+spec:
+  selector:
+    app: kafka-1
+  ports:
+    - protocol: TCP
+      port: 9092
+      targetPort: 9092
+      name: plaintext
+    - protocol: TCP
+      port: 9093
+      targetPort: 9093
+      name: secure
+    - protocol: TCP
+      port: 29092
+      targetPort: 29092
+      name: internal
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: kafka-1
+  labels:
+    app: kafka-1
+spec:
+      containers:
+        - name: broker
+          image: confluentinc/cp-kafka:6.2.4-1-ubi8
+          ports:
+            - containerPort: 9092
+            - containerPort: 9093
+            - containerPort: 29092
+          env:
+            - name: KAFKA_BROKER_ID
+              value: "1"
+            - name: KAFKA_ZOOKEEPER_CONNECT
+              value: 'zookeeper-service-1:2181'
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT,SECURE:SSL
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: PLAINTEXT://kafka-service-1:29092,PLAINTEXT_INTERNAL://kafka-service-1:9092,SECURE://kafka-service-1:9093
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_LISTENER_NAME_SECURE_SSL_TRUSTSTORE_LOCATION
+              value: "/mnt/certs/ts/truststore.jks"
+            - name: KAFKA_LISTENER_NAME_SECURE_SSL_TRUSTSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password-key
+                  name: jks-password-secret
+                  optional: false
+            - name: KAFKA_LISTENER_NAME_SECURE_SSL_KEYSTORE_LOCATION
+              value: "/mnt/certs/ks/keystore.jks"
+            - name: KAFKA_LISTENER_NAME_SECURE_SSL_KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password-key
+                  name: jks-password-secret
+                  optional: false
+            - name: KAFKA_LISTENER_NAME_SECURE_SSL_KEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password-key
+                  name: jks-password-secret
+                  optional: false
+            - name: KAFKA_LISTENER_NAME_SECURE_SSL_CLIENT_AUTH
+              value: "required"
+            - name: KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM
+              value: ""
+          volumeMounts:
+            - mountPath: "/mnt/certs/ts"
+              name: truststore
+              readOnly: true
+            - mountPath: "/mnt/certs/ks"
+              name: keystore
+              readOnly: true
+      volumes:
+        - name: truststore
+          secret:
+            secretName: broker-key-pair
+            items:
+              - key: truststore.jks
+                path: truststore.jks
+        - name: keystore
+          secret:
+            secretName: broker-key-pair
+            items:
+              - key: keystore.jks
+                path: keystore.jks
+      nodeName: nerm-worker-7a9ac
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-service-2
+spec:
+  selector:
+    app: kafka-2
+  ports:
+    - protocol: TCP
+      port: 9092
+      targetPort: 9092
+      name: plaintext
+    - protocol: TCP
+      port: 9093
+      targetPort: 9093
+      name: secure
+    - protocol: TCP
+      port: 29092
+      targetPort: 29092
+      name: internal
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: kafka-2
+  labels:
+    app: kafka-2
+spec:
+  containers:
+    - name: broker
+      image: confluentinc/cp-kafka:6.2.4-1-ubi8
+      ports:
+        - containerPort: 9092
+        - containerPort: 9093
+        - containerPort: 29092
+      env:
+        - name: KAFKA_BROKER_ID
+          value: "2"
+        - name: KAFKA_ZOOKEEPER_CONNECT
+          value: 'zookeeper-service-1:2181'
+        - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+          value: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT,SECURE:SSL
+        - name: KAFKA_ADVERTISED_LISTENERS
+          value: PLAINTEXT://kafka-service-2:29092,PLAINTEXT_INTERNAL://kafka-service-2:9092,SECURE://kafka-service-2:9093
+        - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+          value: "1"
+        - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+          value: "1"
+        - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+          value: "1"
+        - name: KAFKA_LISTENER_NAME_SECURE_SSL_TRUSTSTORE_LOCATION
+          value: "/mnt/certs/ts/truststore.jks"
+        - name: KAFKA_LISTENER_NAME_SECURE_SSL_TRUSTSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password-key
+              name: jks-password-secret
+              optional: false
+        - name: KAFKA_LISTENER_NAME_SECURE_SSL_KEYSTORE_LOCATION
+          value: "/mnt/certs/ks/keystore.jks"
+        - name: KAFKA_LISTENER_NAME_SECURE_SSL_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password-key
+              name: jks-password-secret
+              optional: false
+        - name: KAFKA_LISTENER_NAME_SECURE_SSL_KEY_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password-key
+              name: jks-password-secret
+              optional: false
+        - name: KAFKA_LISTENER_NAME_SECURE_SSL_CLIENT_AUTH
+          value: "required"
+        - name: KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM
+          value: ""
+      volumeMounts:
+        - mountPath: "/mnt/certs/ts"
+          name: truststore
+          readOnly: true
+        - mountPath: "/mnt/certs/ks"
+          name: keystore
+          readOnly: true
+  volumes:
+    - name: truststore
+      secret:
+        secretName: broker-key-pair
+        items:
+          - key: truststore.jks
+            path: truststore.jks
+    - name: keystore
+      secret:
+        secretName: broker-key-pair
+        items:
+          - key: keystore.jks
+            path: keystore.jks
+  nodeName: nerm-worker-7a9af
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-service-3
+spec:
+  selector:
+    app: kafka-3
+  ports:
+    - protocol: TCP
+      port: 9092
+      targetPort: 9092
+      name: plaintext
+    - protocol: TCP
+      port: 9093
+      targetPort: 9093
+      name: secure
+    - protocol: TCP
+      port: 29092
+      targetPort: 29092
+      name: internal
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: kafka-3
+  labels:
+    app: kafka-3
+spec:
+  containers:
+    - name: broker
+      image: confluentinc/cp-kafka:6.2.4-1-ubi8
+      ports:
+        - containerPort: 9092
+        - containerPort: 9093
+        - containerPort: 29092
+      env:
+        - name: KAFKA_BROKER_ID
+          value: "3"
+        - name: KAFKA_ZOOKEEPER_CONNECT
+          value: 'zookeeper-service-1:2181'
+        - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+          value: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT,SECURE:SSL
+        - name: KAFKA_ADVERTISED_LISTENERS
+          value: PLAINTEXT://kafka-service-3:29092,PLAINTEXT_INTERNAL://kafka-service-3:9092,SECURE://kafka-service-3:9093
+        - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+          value: "1"
+        - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+          value: "1"
+        - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+          value: "1"
+        - name: KAFKA_LISTENER_NAME_SECURE_SSL_TRUSTSTORE_LOCATION
+          value: "/mnt/certs/ts/truststore.jks"
+        - name: KAFKA_LISTENER_NAME_SECURE_SSL_TRUSTSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password-key
+              name: jks-password-secret
+              optional: false
+        - name: KAFKA_LISTENER_NAME_SECURE_SSL_KEYSTORE_LOCATION
+          value: "/mnt/certs/ks/keystore.jks"
+        - name: KAFKA_LISTENER_NAME_SECURE_SSL_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password-key
+              name: jks-password-secret
+              optional: false
+        - name: KAFKA_LISTENER_NAME_SECURE_SSL_KEY_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password-key
+              name: jks-password-secret
+              optional: false
+        - name: KAFKA_LISTENER_NAME_SECURE_SSL_CLIENT_AUTH
+          value: "required"
+        - name: KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM
+          value: ""
+      volumeMounts:
+        - mountPath: "/mnt/certs/ts"
+          name: truststore
+          readOnly: true
+        - mountPath: "/mnt/certs/ks"
+          name: keystore
+          readOnly: true
+  nodeName: nerm-worker-7a9am
+  volumes:
+    - name: truststore
+      secret:
+        secretName: broker-key-pair
+        items:
+          - key: truststore.jks
+            path: truststore.jks
+    - name: keystore
+      secret:
+        secretName: broker-key-pair
+        items:
+          - key: keystore.jks
+            path: keystore.jks
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-service-4
+spec:
+  selector:
+    app: kafka-4
+  ports:
+    - protocol: TCP
+      port: 9092
+      targetPort: 9092
+      name: plaintext
+    - protocol: TCP
+      port: 9093
+      targetPort: 9093
+      name: secure
+    - protocol: TCP
+      port: 29092
+      targetPort: 29092
+      name: internal
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: kafka-4
+  labels:
+    app: kafka-4
+spec:
+  containers:
+    - name: broker
+      image: confluentinc/cp-kafka:6.2.4-1-ubi8
+      ports:
+        - containerPort: 9092
+        - containerPort: 9093
+        - containerPort: 29092
+      env:
+        - name: KAFKA_BROKER_ID
+          value: "4"
+        - name: KAFKA_ZOOKEEPER_CONNECT
+          value: 'zookeeper-service-1:2181'
+        - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+          value: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT,SECURE:SSL
+        - name: KAFKA_ADVERTISED_LISTENERS
+          value: PLAINTEXT://kafka-service-4:29092,PLAINTEXT_INTERNAL://kafka-service-4:9092,SECURE://kafka-service-4:9093
+        - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+          value: "1"
+        - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+          value: "1"
+        - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+          value: "1"
+        - name: KAFKA_LISTENER_NAME_SECURE_SSL_TRUSTSTORE_LOCATION
+          value: "/mnt/certs/ts/truststore.jks"
+        - name: KAFKA_LISTENER_NAME_SECURE_SSL_TRUSTSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password-key
+              name: jks-password-secret
+              optional: false
+        - name: KAFKA_LISTENER_NAME_SECURE_SSL_KEYSTORE_LOCATION
+          value: "/mnt/certs/ks/keystore.jks"
+        - name: KAFKA_LISTENER_NAME_SECURE_SSL_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password-key
+              name: jks-password-secret
+              optional: false
+        - name: KAFKA_LISTENER_NAME_SECURE_SSL_KEY_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password-key
+              name: jks-password-secret
+              optional: false
+        - name: KAFKA_LISTENER_NAME_SECURE_SSL_CLIENT_AUTH
+          value: "required"
+        - name: KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM
+          value: ""
+      volumeMounts:
+        - mountPath: "/mnt/certs/ts"
+          name: truststore
+          readOnly: true
+        - mountPath: "/mnt/certs/ks"
+          name: keystore
+          readOnly: true
+  nodeName: nerm-worker-7a9an
+  volumes:
+    - name: truststore
+      secret:
+        secretName: broker-key-pair
+        items:
+          - key: truststore.jks
+            path: truststore.jks
+    - name: keystore
+      secret:
+        secretName: broker-key-pair
+        items:
+          - key: keystore.jks
+            path: keystore.jks

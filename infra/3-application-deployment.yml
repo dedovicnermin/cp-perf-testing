@@ -1,0 +1,89 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: streams-config
+data:
+  BOOTSTRAP_SERVERS: 'kafka-service-1:9093'
+  GROUP_ID: 'STREAM_PERF-002'
+  APPLICATION_ID: 'STREAM_PERF-002'
+  STREAM_THREAD_COUNT: '24'
+  OPTIMIZE_STREAMS: 'none'
+  INPUT_TOPIC: 'test-input'
+  OUTPUT_TOPIC: 'test-output'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: perf-streams
+spec:
+  nodeName: nerm-worker-7a9e9
+  containers:
+    - name: app
+      image: dedovicnermin/perf-streamsapp:latest
+      ports:
+        - containerPort: 9999
+        - containerPort: 8080
+      volumeMounts:
+        - mountPath: "/mnt/certs/ts"
+          name: truststore
+          readOnly: true
+        - mountPath: "/mnt/certs/ks"
+          name: keystore
+          readOnly: true
+      env:
+        - name: DD_API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: dd_api_key
+              name: datadog-secrets
+        - name: KEY_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password-key
+              name: jks-password-secret
+        - name: KEYS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password-key
+              name: jks-password-secret
+        - name: TRUSTS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password-key
+              name: jks-password-secret
+        - name: KEYS_LOCATION
+          value: "/mnt/certs/ks/keystore.jks"
+        - name: TRUSTS_LOCATION
+          value: "/mnt/certs/ts/truststore.jks"
+      envFrom:
+        - configMapRef:
+            name: streams-config
+      imagePullPolicy: Always
+    - name: datadog
+      image: dedovicnermin/perf-test-agent:latest
+      env:
+        - name: DD_API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: dd_api_key
+              name: datadog-secrets
+        - name: DD_JMXFETCH_KAFKA_ENABLED
+          value: "true"
+      imagePullPolicy: Always
+
+  volumes:
+    - name: truststore
+      secret:
+        secretName: client-key-pair
+        items:
+          - key: truststore.jks
+            path: truststore.jks
+    - name: keystore
+      secret:
+        secretName: client-key-pair
+        items:
+          - key: keystore.jks
+            path: keystore.jks
+
+

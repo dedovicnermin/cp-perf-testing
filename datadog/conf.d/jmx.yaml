@@ -1,0 +1,11 @@
+init_config:
+  is_jmx: true
+  collect_default_metrics: true
+instances:
+  - host: localhost
+    port: 9999
+    name: streams-app
+    tags:
+      - env:test
+      - service:streams-perf-test
+      - attempt:one
